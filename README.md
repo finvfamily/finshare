@@ -11,9 +11,7 @@
   </p>
 
   <p>
-    <img src="https://img.shields.io/pypi/v/finshare" alt="PyPI"/>
     <img src="https://img.shields.io/github/stars/finvfamily/finshare" alt="Stars"/>
-    <img src="https://img.shields.io/pypi/dm/finshare" alt="Downloads"/>
     <img src="https://img.shields.io/badge/python-3.8+-blue.svg" alt="Python"/>
     <img src="https://img.shields.io/badge/license-MIT-green.svg" alt="License"/>
   </p>
