@@ -44,3 +44,11 @@ myst_enable_extensions = [
     'deflist',
     'task_lists',
 ]
+
+# Related links configuration
+html_context = {
+    'display_github': True,
+    'github_user': 'finvfamily',
+    'github_repo': 'finshare',
+    'github_version': 'main',
+}
