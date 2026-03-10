@@ -15,6 +15,8 @@ from finshare.models.data_models import (
     DataSourceStatus,
     AdjustmentType,
     MarketType,
+    FrequencyType,
+    MinuteData,
 )
 
 # 为了兼容性，提供别名
@@ -28,7 +30,10 @@ __all__ = [
     "DataSourceStatus",
     "AdjustmentType",
     "MarketType",
-    "KLineData",  # 别名
-    "StockInfo",  # 别名
-    "MarketData",  # 别名
+    "FrequencyType",
+    "MinuteData",
+    # 别名
+    "KLineData",
+    "StockInfo",
+    "MarketData",
 ]

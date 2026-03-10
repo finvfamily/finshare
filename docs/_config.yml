@@ -1,0 +1,25 @@
+# GitHub Pages Configuration
+title: finshare
+description: 专业的金融数据获取工具库
+theme: jekyll-theme-minimal
+
+# Build settings
+markdown: kramdown
+plugins:
+  - jekyll-relative-links
+
+# Exclude unnecessary files
+exclude:
+  - README.md
+  - LICENSE
+  - .gitignore
+  - tests/
+  - examples/
+  - finshare/
+  - setup.py
+  - pyproject.toml
+
+# Relative links
+relative_links:
+  enabled: true
+  collections: true

@@ -122,6 +122,91 @@ class DataSourceManager:
 
         return None
 
+    def get_minutely_data(
+        self,
+        code: str,
+        start: str = None,
+        end: str = None,
+        freq: int = 5,
+        adjust: str = None,
+    ) -> Optional[pd.DataFrame]:
+        """获取分钟K线数据
+
+        Args:
+            code: 股票代码 (支持 000001.SZ, SZ000001, 000001 等格式)
+            start: 开始时间 YYYY-MM-DD 或 YYYY-MM-DD HH:MM:SS
+            end: 结束时间 YYYY-MM-DD 或 YYYY-MM-DD HH:MM:SS
+            freq: 频率 (1/5/15/30/60 分钟)
+            adjust: 复权类型 qfq/hfq/None
+
+        Returns:
+            DataFrame 或 None
+        """
+        from finshare.models.data_models import AdjustmentType
+
+        # 解析时间
+        if start:
+            try:
+                if " " in start:
+                    start_dt = datetime.strptime(start, "%Y-%m-%d %H:%M:%S")
+                else:
+                    start_dt = datetime.strptime(start, "%Y-%m-%d")
+            except ValueError:
+                start_dt = datetime.now()
+        else:
+            start_dt = datetime.now()
+
+        if end:
+            try:
+                if " " in end:
+                    end_dt = datetime.strptime(end, "%Y-%m-%d %H:%M:%S")
+                else:
+                    end_dt = datetime.strptime(end, "%Y-%m-%d")
+            except ValueError:
+                end_dt = datetime.now()
+        else:
+            end_dt = datetime.now()
+
+        # 转换复权类型
+        adjustment = AdjustmentType.NONE
+        if adjust == "qfq":
+            adjustment = AdjustmentType.PREVIOUS
+        elif adjust == "hfq":
+            adjustment = AdjustmentType.POST
+
+        # 优先使用东方财富（支持分钟线）
+        source_name = "eastmoney"
+        source = self.sources.get(source_name)
+
+        if not source or not hasattr(source, "get_minutely_data"):
+            logger.warning(f"数据源 {source_name} 不可用或不支持分钟线")
+            return None
+
+        try:
+            data = source.get_minutely_data(
+                code=code,
+                start=start_dt,
+                end=end_dt,
+                freq=freq,
+                adjustment=adjustment,
+            )
+
+            if data is not None and len(data) > 0:
+                logger.info(
+                    f"[数据源:{source_name}] 获取分钟线成功: {code}, "
+                    f"freq={freq}min, {len(data)}条"
+                )
+                # 转换为 DataFrame
+                df = pd.DataFrame([d.model_dump() for d in data])
+                return df
+            else:
+                logger.warning(f"从 {source_name} 获取分钟线数据为空")
+                return None
+
+        except Exception as e:
+            logger.warning(f"从 {source_name} 获取分钟线失败: {e}")
+            return None
+
     def get_historical_data(
         self,
         code: str,

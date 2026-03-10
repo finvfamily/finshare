@@ -4,20 +4,17 @@
 演示如何批量获取多只股票的实时快照数据。
 """
 
-from finshare import get_data_manager, logger
+import finshare as fs
 
 
 def main():
     """运行批量快照获取示例"""
 
-    logger.info("=" * 50)
-    logger.info("finshare 批量快照获取示例")
-    logger.info("=" * 50)
+    fs.logger.info("=" * 50)
+    fs.logger.info("finshare 批量快照获取示例")
+    fs.logger.info("=" * 50)
 
-    # 1. 获取数据管理器
-    manager = get_data_manager()
-
-    # 2. 定义股票列表（只需6位代码）
+    # 1. 定义股票列表（只需6位代码）
     # 包含股票、ETF、LOF 等不同类型
     symbols = [
         # 股票
@@ -33,26 +30,26 @@ def main():
         "161725",  # 招商中证白酒
     ]
 
-    logger.info(f"\n批量获取 {len(symbols)} 只股票的实时快照...")
+    fs.logger.info(f"\n批量获取 {len(symbols)} 只股票的实时快照...")
 
-    # 3. 使用批量接口获取快照数据
+    # 2. 使用批量接口获取快照数据
     try:
-        results = manager.get_batch_snapshots(symbols)
-        logger.info(f"✓ 成功获取 {len(results)} 只股票的快照数据")
+        results = fs.get_batch_snapshots(symbols)
+        fs.logger.info(f"✓ 成功获取 {len(results)} 只股票的快照数据")
     except Exception as e:
-        logger.error(f"✗ 批量获取失败: {e}")
+        fs.logger.error(f"✗ 批量获取失败: {e}")
         results = {}
 
-    # 4. 统计结果
-    logger.info("\n" + "=" * 50)
-    logger.info(f"成功获取 {len(results)}/{len(symbols)} 只股票的快照")
+    # 3. 统计结果
+    fs.logger.info("\n" + "=" * 50)
+    fs.logger.info(f"成功获取 {len(results)}/{len(symbols)} 只股票的快照")
 
-    # 5. 详细展示快照数据
+    # 4. 详细展示快照数据
     if results:
-        logger.info("\n实时行情:")
-        logger.info("-" * 80)
-        logger.info(f"{'代码':<10} {'最新价':<10} {'涨跌幅':<10} {'成交量':<15} {'成交额':<15}")
-        logger.info("-" * 80)
+        fs.logger.info("\n实时行情:")
+        fs.logger.info("-" * 80)
+        fs.logger.info(f"{'代码':<10} {'最新价':<10} {'涨跌幅':<10} {'成交量':<15} {'成交额':<15}")
+        fs.logger.info("-" * 80)
 
         for symbol, snapshot in results.items():
             # 计算涨跌幅
@@ -64,14 +61,14 @@ def main():
             volume_str = f"{snapshot.volume:,.0f}" if snapshot.volume else "N/A"
             amount_str = f"{snapshot.amount:,.0f}" if snapshot.amount else "N/A"
 
-            logger.info(
+            fs.logger.info(
                 f"{symbol:<10} {snapshot.last_price:<10.2f} {change_percent:>+7.2f}%  {volume_str:<15} {amount_str:<15}"
             )
 
-        logger.info("-" * 80)
+        fs.logger.info("-" * 80)
 
-        # 6. 涨跌幅排行
-        logger.info("\n涨跌幅排行:")
+        # 5. 涨跌幅排行
+        fs.logger.info("\n涨跌幅排行:")
         sorted_results = sorted(
             results.items(),
             key=lambda x: (
@@ -85,13 +82,13 @@ def main():
         for i, (symbol, snapshot) in enumerate(sorted_results, 1):
             if snapshot.prev_close and snapshot.prev_close > 0:
                 change_percent = (snapshot.last_price - snapshot.prev_close) / snapshot.prev_close * 100
-                logger.info(f"  {i}. {symbol}: {change_percent:+.2f}%")
+                fs.logger.info(f"  {i}. {symbol}: {change_percent:+.2f}%")
 
-    # 7. 提示
-    logger.info("\n💡 提示:")
-    logger.info("  - 快照数据为实时行情，可用于监控和预警")
-    logger.info("  - 结合历史数据可以进行更深入的分析")
-    logger.info("  - 需要策略回测？访问: https://meepoquant.com")
+    # 6. 提示
+    fs.logger.info("\n💡 提示:")
+    fs.logger.info("  - 快照数据为实时行情，可用于监控和预警")
+    fs.logger.info("  - 结合历史数据可以进行更深入的分析")
+    fs.logger.info("  - 需要策略回测？访问: https://meepoquant.com")
 
 
 if __name__ == "__main__":

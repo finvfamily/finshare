@@ -3,7 +3,7 @@ import time
 from datetime import date, datetime
 from typing import List, Optional, Dict
 
-from finshare.models.data_models import HistoricalData, SnapshotData, AdjustmentType, MarketType
+from finshare.models.data_models import HistoricalData, SnapshotData, AdjustmentType, MarketType, MinuteData
 from finshare.logger import logger
 from finshare.sources.base_source import BaseDataSource
 
@@ -371,11 +371,34 @@ class EastMoneyDataSource(BaseDataSource):
             return None
 
     def _convert_to_secid(self, code: str) -> str:
-        """转换为东方财富secid格式"""
-        # 确保使用完整代码
+        """转换为东方财富secid格式
+
+        支持的输入格式:
+        - SZ000001, SH600519 (旧格式)
+        - 000001.SZ, 600001.SH
+        - 000001, 600001 (纯数字)
+        """
+        # 标准化代码
         full_code = self._ensure_full_code(code)
 
-        # 判断市场
+        # 处理标准格式 (000001.SZ)
+        if "." in full_code:
+            parts = full_code.split(".")
+            if len(parts) == 2:
+                num_code = parts[0]
+                market_str = parts[1].upper()
+
+                if market_str == "SH":
+                    market = 1
+                    return f"{market}.{num_code}"
+                elif market_str == "SZ":
+                    market = 0
+                    return f"{market}.{num_code}"
+                elif market_str == "BJ":
+                    market = 0
+                    return f"{market}.{num_code}"
+
+        # 判断市场 (旧格式 SZ000001)
         if full_code.startswith("SH"):
             market = 1  # 沪市
             clean_code = full_code[2:]
@@ -480,3 +503,166 @@ class EastMoneyDataSource(BaseDataSource):
     def _get_full_code(self, code: str) -> str:
         """获取完整代码（添加市场前缀）- 保持向后兼容"""
         return self._ensure_full_code(code)
+
+    # ============ 分钟线数据接口 ============
+
+    def get_minutely_data(
+        self,
+        code: str,
+        start: datetime,
+        end: datetime,
+        freq: int = 5,
+        adjustment: AdjustmentType = AdjustmentType.NONE,
+    ) -> List[MinuteData]:
+        """
+        获取分钟K线数据
+
+        Args:
+            code: 股票代码 (支持 000001.SZ, SZ000001, 000001 等格式)
+            start: 开始时间
+            end: 结束时间
+            freq: 频率 (1/5/15/30/60 分钟)
+            adjustment: 复权类型
+
+        Returns:
+            分钟线数据列表
+        """
+        try:
+            # 确保使用完整代码
+            full_code = self._ensure_full_code(code)
+
+            # 转换复权类型
+            adjust_type = self._convert_adjustment_type(adjustment)
+
+            # 东方财富分钟线参数
+            # klt: 1=1分钟, 5=5分钟, 15=15分钟, 30=30分钟, 60=60分钟
+            klt_map = {1: 1, 5: 5, 15: 15, 30: 30, 60: 60}
+            klt = klt_map.get(freq, 5)
+
+            # secid 转换
+            secid = self._convert_to_secid(full_code)
+
+            # 东方财富分钟线接口使用特殊的时间格式
+            # beg: 0 表示从最近开始获取，end 使用时间戳格式（毫秒）
+            # 计算结束时间戳
+            if end:
+                end_ts = int(end.timestamp() * 1000)
+            else:
+                end_ts = int(datetime.now().timestamp() * 1000)
+
+            # 构建请求参数
+            params = {
+                "secid": secid,
+                "klt": klt,  # 分钟线频率
+                "fqt": adjust_type,  # 复权类型
+                "beg": "0",  # 从最近开始
+                "end": str(end_ts),
+                "fields1": "f1,f2,f3,f4,f5,f6",
+                "fields2": "f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61",
+                "ut": "fa5fd1943c7b386f172d6893dbfba10b",
+                "_": str(int(time.time() * 1000)),
+            }
+
+            logger.debug(f"东方财富分钟线请求参数: {params}")
+
+            # 发送请求
+            response = self._make_request(self.historical_url, params)
+
+            if not response or response.get("data") is None:
+                logger.warning(f"东方财富分钟线请求失败: {full_code}")
+                return []
+
+            data = response["data"]
+            if not data or "klines" not in data:
+                logger.warning(f"东方财富分钟线数据为空: {full_code}")
+                return []
+
+            # 解析分钟线数据
+            minute_data = self._parse_minutely_data(
+                data["klines"], full_code, freq
+            )
+
+            if minute_data:
+                logger.debug(
+                    f"东方财富分钟线获取成功: {full_code}, "
+                    f"freq={freq}min, 共{len(minute_data)}条数据"
+                )
+            else:
+                logger.warning(f"东方财富分钟线解析后为空: {full_code}")
+
+            return minute_data
+
+        except Exception as e:
+            error_msg = f"获取东方财富分钟线失败 {code}: {e}"
+            logger.error(error_msg)
+            return []
+
+    def _parse_minutely_data(
+        self,
+        klines: List[str],
+        code: str,
+        freq: int,
+    ) -> List[MinuteData]:
+        """解析东方财富分钟线数据格式"""
+        minute_list = []
+
+        # 确保使用标准格式代码
+        fs_code = self._ensure_full_code(code)
+
+        # 获取价格除数
+        price_divisor = self._get_price_divisor(code)
+
+        for kline in klines:
+            try:
+                # 东方财富分钟线格式: "2024-01-09 09:30:00,12.34,12.56,12.12,12.45,1234567,123456789"
+                # 格式: 时间,开盘,收盘,最高,最低,成交量,成交额
+                parts = kline.split(",")
+                if len(parts) < 6:
+                    continue
+
+                # 解析时间 - 东方财富返回 "2024-01-09 09:35" 或 "2024-01-09 09:35:00"
+                time_str = parts[0]
+                # 尝试多种时间格式
+                for fmt in ["%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M"]:
+                    try:
+                        dt = datetime.strptime(time_str, fmt)
+                        trade_time = dt.strftime("%Y%m%d%H%M%S")
+                        break
+                    except ValueError:
+                        continue
+                else:
+                    # 无法解析则跳过
+                    logger.debug(f"无法解析时间格式: {time_str}")
+                    continue
+
+                # 解析价格（注意：东方财富返回的是元，不是分）
+                open_price = float(parts[1]) if parts[1] else 0.0
+                close_price = float(parts[2]) if parts[2] else 0.0
+                high_price = float(parts[3]) if parts[3] else 0.0
+                low_price = float(parts[4]) if parts[4] else 0.0
+
+                # 成交量（东方财富分钟线返回的是股）
+                volume = int(parts[5]) if parts[5] else 0
+
+                # 成交额
+                amount = float(parts[6]) if len(parts) > 6 and parts[6] else 0.0
+
+                minute = MinuteData(
+                    fs_code=fs_code,
+                    trade_time=trade_time,
+                    open=open_price,
+                    close=close_price,
+                    high=high_price,
+                    low=low_price,
+                    volume=volume,
+                    amount=amount,
+                    frequency=str(freq),
+                    data_source=self.source_name,
+                )
+                minute_list.append(minute)
+
+            except (ValueError, TypeError, IndexError) as e:
+                logger.debug(f"解析东方财富分钟线数据条目失败: {e}")
+                continue
+
+        return minute_list

@@ -7,6 +7,7 @@
   <p>
     <a href="https://meepoquant.com">官网</a> •
     <a href="https://github.com/finvfamily/finshare">GitHub</a> •
+    <a href="https://discord.gg/XT5f8ZGB">Discord</a> •
     <a href="https://github.com/finvfamily/finshare/issues">问题反馈</a>
   </p>
 
@@ -230,6 +231,7 @@ MIT License - 详见 [LICENSE](LICENSE)
 
 - **官方网站**: https://meepoquant.com
 - **GitHub**: https://github.com/finvfamily/finshare
+- **Discord**: https://discord.gg/XT5f8ZGB
 - **PyPI**: https://pypi.org/project/finshare
 - **问题反馈**: https://github.com/finvfamily/finshare/issues
 

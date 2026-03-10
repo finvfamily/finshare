@@ -25,6 +25,58 @@ python examples/01_basic_usage.py
 python examples/02_batch_fetch.py
 ```
 
+### 03_batch_snapshots.py
+批量快照示例，演示如何：
+- 批量获取多只股票实时快照
+- 并发获取优化
+
+```bash
+python examples/03_batch_snapshots.py
+```
+
+### 04_financial_data.py
+财务数据示例，演示如何：
+- 获取利润表数据
+- 获取资产负债表数据
+- 获取现金流量表数据
+- 获取财务指标
+
+```bash
+python examples/04_financial_data.py
+```
+
+### 05_feature_data.py
+特色数据示例，演示如何：
+- 获取资金流向数据
+- 获取行业资金流向
+- 获取龙虎榜数据
+- 获取融资融券数据
+
+```bash
+python examples/05_feature_data.py
+```
+
+### 06_async_usage.py
+异步数据获取示例，演示如何：
+- 使用异步接口获取数据
+- 批量并发获取
+- 高效处理大量股票
+
+```bash
+python examples/06_async_usage.py
+```
+
+### 07_cache_usage.py
+缓存与稳定性示例，演示如何：
+- 使用缓存装饰器减少API调用
+- 使用熔断器防止故障传播
+- 使用智能路由选择最佳数据源
+- 使用监控系统掌握数据源状态
+
+```bash
+python examples/07_cache_usage.py
+```
+
 ## 运行示例
 
 ### 前提条件

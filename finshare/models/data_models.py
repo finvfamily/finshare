@@ -1,21 +1,73 @@
 from datetime import datetime, date
-from typing import Optional
+from typing import Optional, List
 from pydantic import BaseModel, Field, ConfigDict, field_validator
 from enum import Enum
 
 
 class AdjustmentType(str, Enum):
+    """复权类型"""
     NONE = "none"
     PREVIOUS = "pre"
     POST = "post"
 
 
 class MarketType(str, Enum):
+    """市场类型"""
     SH = "sh"
     SZ = "sz"
     BJ = "bj"
     HK = "hk"
     US = "us"
+
+
+class FrequencyType(str, Enum):
+    """K线频率"""
+    MIN_1 = "1"
+    MIN_5 = "5"
+    MIN_15 = "15"
+    MIN_30 = "30"
+    MIN_60 = "60"
+    DAILY = "d"
+    WEEKLY = "w"
+    MONTHLY = "m"
+
+
+# ============ 分钟线数据模型 ============
+
+class MinuteData(BaseModel):
+    """
+    分钟线数据
+
+    字段说明:
+    - fs_code: 股票代码 (000001.SZ)
+    - trade_time: 交易时间 (YYYYMMDDHHMMSS)
+    - open/high/low/close: 价格 (元)
+    - volume: 成交量 (股)
+    - amount: 成交金额 (元)
+    """
+
+    fs_code: str = Field(..., description="股票代码: 000001.SZ")
+    trade_time: str = Field(..., description="交易时间: YYYYMMDDHHMMSS")
+
+    # 行情数据
+    open: float = Field(..., description="开盘价(元)")
+    close: float = Field(..., description="收盘价(元)")
+    high: float = Field(..., description="最高价(元)")
+    low: float = Field(..., description="最低价(元)")
+
+    # 量价数据
+    volume: int = Field(..., description="成交量(股)")
+    amount: float = Field(0.0, description="成交金额(元)")
+
+    # 元数据
+    frequency: str = Field("5", description="频率: 1/5/15/30/60")
+    data_source: str = Field(default="unknown", description="数据源")
+
+    model_config = ConfigDict(
+        populate_by_name=True,
+        json_encoders={datetime: lambda v: v.isoformat()},
+        extra="ignore",
+    )
 
 
 class HistoricalData(BaseModel):
