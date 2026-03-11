@@ -4,7 +4,7 @@ project = 'finshare'
 copyright = '2024, finshare'
 author = 'finshare'
 
-release = '0.1.2'
+release = '1.0.3'
 
 extensions = [
     'sphinx.ext.autodoc',
@@ -36,11 +36,6 @@ html_theme_options = {
     'expand_navigation': True,
 }
 
-# 自定义 JavaScript
-def setup_custom_js(app, pagename, templatename, context, doctree):
-    if 'pagename' not in context:
-        context['pagename'] = pagename
-
 html_js_files = [
     'navigation.js',
 ]
@@ -56,7 +51,6 @@ myst_enable_extensions = [
     'task_lists',
 ]
 
-# Related links configuration
 html_context = {
     'display_github': True,
     'github_user': 'finvfamily',
