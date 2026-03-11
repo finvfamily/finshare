@@ -5,6 +5,7 @@
   <p>A Professional Financial Data Fetching Toolkit for Python</p>
 
   <p>
+    <a href="https://finvfamily.github.io/finshare/">📖 在线文档</a> •
     <a href="https://meepoquant.com">官网</a> •
     <a href="https://github.com/finvfamily/finshare">GitHub</a> •
     <a href="https://discord.gg/XT5f8ZGB">Discord</a> •
@@ -17,6 +18,19 @@
     <img src="https://img.shields.io/badge/license-MIT-green.svg" alt="License"/>
   </p>
 </div>
+
+---
+
+## 📖 在线文档
+
+**详细使用文档请访问：** 👉 **[finshare 文档网站](https://finvfamily.github.io/finshare/)**
+
+文档网站包含：
+- 完整的 API 参考
+- 快速开始指南
+- 数据源说明
+- 常见问题解答
+- 更多代码示例
 
 ---
 

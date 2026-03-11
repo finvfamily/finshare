@@ -21,7 +21,7 @@ html_theme = 'sphinx_rtd_theme'
 html_static_path = ['_static']
 
 html_theme_options = {
-    'canonical_url': '',
+    'canonical_url': 'https://finvfamily.github.io/finshare/',
     'analytics_id': '',
     'display_version': True,
     'prev_next_buttons_location': 'both',
@@ -32,6 +32,7 @@ html_theme_options = {
     'navigation_depth': 4,
     'includehidden': True,
     'titles_only': False,
+    'expand_navigation': True,
 }
 
 intersphinx_mapping = {
