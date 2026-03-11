@@ -241,7 +241,7 @@ class FutureDataSource(BaseDataSource):
 
         使用 get_future_snapshot 获取期货快照数据。
         """
-        logger.warning(f"期货数据源不支持 get_snapshot_data，请使用 get_future_snapshot")
+        logger.warning("期货数据源不支持 get_snapshot_data，请使用 get_future_snapshot")
         return None
 
     def get_batch_snapshots(self, codes: List[str]) -> Dict[str, SnapshotData]:
@@ -250,7 +250,7 @@ class FutureDataSource(BaseDataSource):
 
         使用 get_batch_future_snapshots 获取期货快照数据。
         """
-        logger.warning(f"期货数据源不支持 get_batch_snapshots，请使用 get_batch_future_snapshots")
+        logger.warning("期货数据源不支持 get_batch_snapshots，请使用 get_batch_future_snapshots")
         return {}
 
     def _parse_future_code(self, code: str) -> tuple:

@@ -304,17 +304,17 @@ class FundDataSource(BaseDataSource):
 
     def get_historical_data(self, code, start_date, end_date, adjustment=None):
         """获取历史数据 (基金不支持，返回空列表)"""
-        logger.warning(f"基金数据源不支持 get_historical_data，请使用 get_fund_nav")
+        logger.warning("基金数据源不支持 get_historical_data，请使用 get_fund_nav")
         return []
 
     def get_snapshot_data(self, code):
         """获取交易快照数据 (基金不支持，返回 None)"""
-        logger.warning(f"基金数据源不支持 get_snapshot_data，请使用 get_fund_nav")
+        logger.warning("基金数据源不支持 get_snapshot_data，请使用 get_fund_nav")
         return None
 
     def get_batch_snapshots(self, codes):
         """批量获取快照数据 (基金不支持，返回空字典)"""
-        logger.warning(f"基金数据源不支持 get_batch_snapshots，请使用 get_fund_nav")
+        logger.warning("基金数据源不支持 get_batch_snapshots，请使用 get_fund_nav")
         return {}
 
 
