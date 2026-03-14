@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "finshare"
-version = "1.0.3"
+version = "1.0.8"
 description = "A professional financial data fetching toolkit for Python"
 readme = "README.md"
 authors = [
