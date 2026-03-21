@@ -256,7 +256,10 @@ class IndexClient(BaseClient):
 
     def get_index_pe(self, symbol: str) -> pd.DataFrame:
         """获取指数 PE 历史（带缓存）"""
-        cache_key = f"index_pe:{symbol}"
+        lg_symbol = self._resolve_lg_symbol(symbol)
+        if not lg_symbol:
+            return pd.DataFrame(columns=["date", "index_val", "pe", "pe_ttm"])
+        cache_key = f"index_pe:{lg_symbol}"
         result = self._cached_request(
             cache_key, self.TTL_VALUATION,
             lambda: self._fetch_index_pe(symbol)
@@ -265,7 +268,10 @@ class IndexClient(BaseClient):
 
     def get_index_pb(self, symbol: str) -> pd.DataFrame:
         """获取指数 PB 历史（带缓存）"""
-        cache_key = f"index_pb:{symbol}"
+        lg_symbol = self._resolve_lg_symbol(symbol)
+        if not lg_symbol:
+            return pd.DataFrame(columns=["date", "index_val", "pb"])
+        cache_key = f"index_pb:{lg_symbol}"
         result = self._cached_request(
             cache_key, self.TTL_VALUATION,
             lambda: self._fetch_index_pb(symbol)
