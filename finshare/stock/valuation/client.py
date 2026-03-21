@@ -75,7 +75,7 @@ class ValuationClient(BaseClient):
             logger.warning(f"[valuation] 未知的全球指数代号: {symbol}")
             return empty
 
-        cache_key = f"global_index:{symbol}"
+        cache_key = f"global_index:{secid}"
         result = self._cached_request(
             cache_key, self.TTL_VALUATION,
             lambda: self._fetch_global_index_daily(secid, symbol),
