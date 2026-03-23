@@ -274,10 +274,15 @@ class FeatureClient:
 
         logger.debug(f"获取龙虎榜: {start_date} - {end_date}")
 
-        params = {
+        empty_cols = [
+            "fs_code", "trade_date", "close_price", "change_rate", "net_buy_amount",
+            "buy_amount", "sell_amount", "turnover_rate", "reason"
+        ]
+
+        base_params = {
             "sortColumns": "SECURITY_CODE,TRADE_DATE",
             "sortTypes": "1,-1",
-            "pageSize": "5000",
+            "pageSize": "500",
             "pageNumber": "1",
             "reportName": "RPT_DAILYBILLBOARD_DETAILSNEW",
             "columns": "SECURITY_CODE,SECUCODE,SECURITY_NAME_ABBR,TRADE_DATE,EXPLAIN,CLOSE_PRICE,CHANGE_RATE,"
@@ -288,54 +293,67 @@ class FeatureClient:
             "filter": f"(TRADE_DATE<='{end_date_fmt}')(TRADE_DATE>='{start_date_fmt}')",
         }
 
-        data = self._make_request(self.LHBB_URL, params)
-
-        if not data:
-            return pd.DataFrame(columns=[
-                "fs_code", "trade_date", "close_price", "change_rate", "net_buy_amount",
-                "buy_amount", "sell_amount", "turnover_rate", "reason"
-            ])
-
         try:
-            result = data.get("result", {})
-            data_list = result.get("data", [])
+            all_records = []
+            page = 1
+            total_pages = 1  # 初始值，首次请求后更新
 
-            if not data_list:
-                return pd.DataFrame(columns=[
-                    "fs_code", "trade_date", "close_price", "change_rate", "net_buy_amount",
-                    "buy_amount", "sell_amount", "turnover_rate", "reason"
-                ])
+            while page <= total_pages:
+                params = {**base_params, "pageNumber": str(page)}
+                data = self._make_request(self.LHBB_URL, params)
 
-            records = []
-            for item in data_list:
-                # 转换日期格式
-                trade_date = item.get("TRADE_DATE", "")
-                if trade_date:
-                    trade_date = trade_date.replace("-", "")[:8]
+                if not data:
+                    break
 
-                record = {
-                    "fs_code": item.get("SECUCODE", ""),
-                    "trade_date": trade_date,
-                    "close_price": item.get("CLOSE_PRICE", 0),
-                    "change_rate": item.get("CHANGE_RATE", 0),
-                    "net_buy_amount": item.get("BILLBOARD_NET_AMT", 0),
-                    "buy_amount": item.get("BILLBOARD_BUY_AMT", 0),
-                    "sell_amount": item.get("BILLBOARD_SELL_AMT", 0),
-                    "turnover_rate": item.get("TURNOVERRATE", 0),
-                    "reason": item.get("EXPLANATION", ""),
-                }
-                records.append(record)
+                result = data.get("result", {})
+                if not result:
+                    break
 
-            df = pd.DataFrame(records)
-            logger.info(f"获取龙虎榜成功: {len(records)}条")
+                # 首次请求后计算总页数
+                if page == 1:
+                    total = result.get("count", 0)
+                    if total > 0:
+                        total_pages = (total + 499) // 500
+                        logger.debug(f"龙虎榜共 {total} 条, {total_pages} 页")
+                    else:
+                        break
+
+                data_list = result.get("data", [])
+                if not data_list:
+                    break
+
+                for item in data_list:
+                    trade_date = item.get("TRADE_DATE", "")
+                    if trade_date:
+                        trade_date = trade_date.replace("-", "")[:8]
+
+                    record = {
+                        "fs_code": item.get("SECUCODE", ""),
+                        "trade_date": trade_date,
+                        "close_price": item.get("CLOSE_PRICE", 0),
+                        "change_rate": item.get("CHANGE_RATE", 0),
+                        "net_buy_amount": item.get("BILLBOARD_NET_AMT", 0),
+                        "buy_amount": item.get("BILLBOARD_BUY_AMT", 0),
+                        "sell_amount": item.get("BILLBOARD_SELL_AMT", 0),
+                        "turnover_rate": item.get("TURNOVERRATE", 0),
+                        "reason": item.get("EXPLANATION", ""),
+                    }
+                    all_records.append(record)
+
+                page += 1
+                if page <= total_pages:
+                    time.sleep(0.5)
+
+            if not all_records:
+                return pd.DataFrame(columns=empty_cols)
+
+            df = pd.DataFrame(all_records)
+            logger.info(f"获取龙虎榜成功: {len(all_records)}条")
             return df
 
         except Exception as e:
             logger.error(f"解析龙虎榜失败: {e}")
-            return pd.DataFrame(columns=[
-                "fs_code", "trade_date", "close_price", "change_rate", "net_buy_amount",
-                "buy_amount", "sell_amount", "turnover_rate", "reason"
-            ])
+            return pd.DataFrame(columns=empty_cols)
 
     def get_lhb_detail(self, code: str, trade_date: str = None) -> pd.DataFrame:
         """
@@ -447,58 +465,76 @@ class FeatureClient:
         else:
             filter_expr = ""
 
-        params = {
+        empty_cols = ["fs_code", "trade_date", "rzye", "rqyl", "rzje", "rqmcl", "rzrqye"]
+
+        base_params = {
             "reportName": "RPTA_WEB_MARGIN_DAILYTRADE",
             "columns": "ALL",
             "pageNumber": "1",
-            "pageSize": "100",
+            "pageSize": "500",
             "sortColumns": "STATISTICS_DATE",
             "sortTypes": "-1",
             "filter": filter_expr,
         }
 
-        data = self._make_request(self.MARGIN_URL, params)
-
-        if not data:
-            return pd.DataFrame(columns=[
-                "fs_code", "trade_date", "rzye", "rqyl", "rzje", "rqyl", "rzrqye"
-            ])
-
         try:
-            result = data.get("result", {})
-            data_list = result.get("data", [])
+            all_records = []
+            page = 1
+            total_pages = 1
 
-            if not data_list:
-                return pd.DataFrame(columns=[
-                    "fs_code", "trade_date", "rzye", "rqyl", "rzje", "rqyl", "rzrqye"
-                ])
+            while page <= total_pages:
+                params = {**base_params, "pageNumber": str(page)}
+                data = self._make_request(self.MARGIN_URL, params)
 
-            records = []
-            for item in data_list:
-                trade_date = item.get("STATISTICS_DATE", "")
-                if trade_date:
-                    trade_date = trade_date.replace("-", "")[:8]
+                if not data:
+                    break
 
-                record = {
-                    "fs_code": item.get("SECUCODE", ""),
-                    "trade_date": trade_date,
-                    "rzye": item.get("FIN_BALANCE", 0),  # 融资余额
-                    "rqyl": item.get("LOAN_BALANCE", 0),  # 融券余额
-                    "rzje": item.get("FIN_BUY_AMT", 0),  # 融资买入额
-                    "rqmcl": item.get("LOAN_SELL_AMT", 0),  # 融券卖出量
-                    "rzrqye": item.get("MARGIN_BALANCE", 0),  # 融资融券余额
-                }
-                records.append(record)
+                result = data.get("result", {})
+                if not result:
+                    break
 
-            df = pd.DataFrame(records)
-            logger.info(f"获取融资融券成功: {len(records)}条")
+                if page == 1:
+                    total = result.get("count", 0)
+                    if total > 0:
+                        total_pages = (total + 499) // 500
+                        logger.debug(f"融资融券共 {total} 条, {total_pages} 页")
+                    else:
+                        break
+
+                data_list = result.get("data", [])
+                if not data_list:
+                    break
+
+                for item in data_list:
+                    trade_date = item.get("STATISTICS_DATE", "")
+                    if trade_date:
+                        trade_date = trade_date.replace("-", "")[:8]
+
+                    record = {
+                        "fs_code": item.get("SECUCODE", ""),
+                        "trade_date": trade_date,
+                        "rzye": item.get("FIN_BALANCE", 0),  # 融资余额
+                        "rqyl": item.get("LOAN_BALANCE", 0),  # 融券余额
+                        "rzje": item.get("FIN_BUY_AMT", 0),  # 融资买入额
+                        "rqmcl": item.get("LOAN_SELL_AMT", 0),  # 融券卖出量
+                        "rzrqye": item.get("MARGIN_BALANCE", 0),  # 融资融券余额
+                    }
+                    all_records.append(record)
+
+                page += 1
+                if page <= total_pages:
+                    time.sleep(0.5)
+
+            if not all_records:
+                return pd.DataFrame(columns=empty_cols)
+
+            df = pd.DataFrame(all_records)
+            logger.info(f"获取融资融券成功: {len(all_records)}条")
             return df
 
         except Exception as e:
             logger.error(f"解析融资融券失败: {e}")
-            return pd.DataFrame(columns=[
-                "fs_code", "trade_date", "rzye", "rqyl", "rzje", "rqyl", "rzrqye"
-            ])
+            return pd.DataFrame(columns=empty_cols)
 
     def get_margin_detail(self, code: str, trade_date: str = None) -> pd.DataFrame:
         """
