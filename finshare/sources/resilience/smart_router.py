@@ -28,6 +28,15 @@ class DataType(Enum):
     INDUSTRY = "industry"        # 行业分类
     DIVIDEND = "dividend"        # 分红数据
     GLOBAL_INDEX = "global_index"  # 全球指数
+    # 新增数据类型
+    CONCEPT_LIST = "concept_list"              # 概念板块列表
+    CONCEPT_CONSTITUENTS = "concept_constituents"  # 概念板块成分股
+    CONCEPT_MONEY_FLOW = "concept_money_flow"  # 概念板块资金流向
+    MONEY_FLOW_STOCK = "money_flow_stock"      # 个股资金流向
+    EARNINGS_CALENDAR = "earnings_calendar"    # 业绩预告日历
+    EARNINGS_PREANNOUNCE = "earnings_preannounce"  # 业绩预告
+    MARKET_OVERVIEW = "market_overview"        # 市场概览
+    MARGIN_SUMMARY = "margin_summary"          # 融资融券汇总
 
 
 class SourceType(Enum):
@@ -37,6 +46,14 @@ class SourceType(Enum):
     SINA = "sina"
     TDX = "tdx"
     BAOSTOCK = "baostock"
+    PLAYWRIGHT_EASTMONEY = "playwright_eastmoney"
+    PLAYWRIGHT_SINA = "playwright_sina"
+
+
+class SourceTier(str, Enum):
+    """数据源层级：api 层优先使用，scraper 层（Playwright）仅在 api 层全部失败时降级。"""
+    API = "api"
+    SCRAPER = "scraper"
 
 
 @dataclass
@@ -46,6 +63,7 @@ class SourcePreference:
     priority: int = 0  # 优先级，数字越小优先级越高
     timeout: float = 30.0  # 超时时间（秒）
     enabled: bool = True
+    tier: SourceTier = SourceTier.API
 
 
 # 默认数据源偏好配置
@@ -98,6 +116,36 @@ DEFAULT_PREFERENCES: Dict[DataType, List[SourcePreference]] = {
     DataType.GLOBAL_INDEX: [
         SourcePreference(SourceType.EASTMONEY, priority=1, timeout=20),
     ],
+    # 新增数据类型的默认偏好（当前仅 api 层）
+    DataType.CONCEPT_LIST: [
+        SourcePreference(source=SourceType.EASTMONEY, priority=1, timeout=10.0, tier=SourceTier.API),
+        SourcePreference(source=SourceType.SINA, priority=2, timeout=10.0, tier=SourceTier.API),
+    ],
+    DataType.CONCEPT_CONSTITUENTS: [
+        SourcePreference(source=SourceType.EASTMONEY, priority=1, timeout=10.0, tier=SourceTier.API),
+        SourcePreference(source=SourceType.SINA, priority=2, timeout=10.0, tier=SourceTier.API),
+    ],
+    DataType.CONCEPT_MONEY_FLOW: [
+        SourcePreference(source=SourceType.EASTMONEY, priority=1, timeout=10.0, tier=SourceTier.API),
+    ],
+    DataType.MONEY_FLOW_STOCK: [
+        SourcePreference(source=SourceType.EASTMONEY, priority=1, timeout=10.0, tier=SourceTier.API),
+        SourcePreference(source=SourceType.SINA, priority=2, timeout=10.0, tier=SourceTier.API),
+    ],
+    DataType.EARNINGS_CALENDAR: [
+        SourcePreference(source=SourceType.EASTMONEY, priority=1, timeout=10.0, tier=SourceTier.API),
+    ],
+    DataType.EARNINGS_PREANNOUNCE: [
+        SourcePreference(source=SourceType.EASTMONEY, priority=1, timeout=10.0, tier=SourceTier.API),
+    ],
+    DataType.MARKET_OVERVIEW: [
+        SourcePreference(source=SourceType.EASTMONEY, priority=1, timeout=10.0, tier=SourceTier.API),
+        SourcePreference(source=SourceType.SINA, priority=2, timeout=10.0, tier=SourceTier.API),
+    ],
+    DataType.MARGIN_SUMMARY: [
+        SourcePreference(source=SourceType.EASTMONEY, priority=1, timeout=10.0, tier=SourceTier.API),
+        SourcePreference(source=SourceType.SINA, priority=2, timeout=10.0, tier=SourceTier.API),
+    ],
 }
 
 
@@ -115,7 +163,7 @@ class SmartRouter:
         Args:
             preferences: 数据源偏好配置
         """
-        self._preferences = preferences or DEFAULT_PREFERENCES.copy()
+        self.preferences = preferences if preferences is not None else DEFAULT_PREFERENCES.copy()
         self._source_health: Dict[SourceType, Dict[str, Any]] = {}
         self._source_stats: Dict[SourceType, Dict[str, Any]] = {}
 
@@ -129,12 +177,12 @@ class SmartRouter:
         Returns:
             最佳数据源
         """
-        preferences = self._preferences.get(data_type, [])
-        if not preferences:
+        prefs = self.preferences.get(data_type, [])
+        if not prefs:
             return None
 
         # 按优先级排序，排除不健康的数据源
-        for pref in sorted(preferences, key=lambda x: x.priority):
+        for pref in sorted(prefs, key=lambda x: x.priority):
             if not pref.enabled:
                 continue
 
@@ -150,6 +198,27 @@ class SmartRouter:
 
         logger.warning(f"没有可用的数据源 for {data_type.value}")
         return None
+
+    def get_tiered_sources(self, data_type: DataType) -> tuple[list[SourcePreference], list[SourcePreference]]:
+        """返回分层的源列表：(api_tier_sources, scraper_tier_sources)。
+        每层内部按 priority 排序。跳过 disabled 和不健康的源。
+        """
+        prefs = self.preferences.get(data_type, [])
+        api_sources = []
+        scraper_sources = []
+
+        for pref in sorted(prefs, key=lambda p: p.priority):
+            if not pref.enabled:
+                continue
+            health = self._source_health.get(pref.source)
+            if health and not health.get("is_healthy", True):
+                continue
+            if pref.tier == SourceTier.SCRAPER:
+                scraper_sources.append(pref)
+            else:
+                api_sources.append(pref)
+
+        return api_sources, scraper_sources
 
     def update_source_health(
         self,
@@ -246,20 +315,20 @@ class SmartRouter:
             for source, health in self._source_health.items()
         }
 
-    def set_preference(self, data_type: DataType, preferences: List[SourcePreference]) -> None:
+    def set_preference(self, data_type: DataType, prefs: List[SourcePreference]) -> None:
         """设置数据源偏好"""
-        self._preferences[data_type] = preferences
+        self.preferences[data_type] = prefs
 
     def enable_source(self, source: SourceType) -> None:
         """启用数据源"""
-        for prefs in self._preferences.values():
+        for prefs in self.preferences.values():
             for pref in prefs:
                 if pref.source == source:
                     pref.enabled = True
 
     def disable_source(self, source: SourceType) -> None:
         """禁用数据源"""
-        for prefs in self._preferences.values():
+        for prefs in self.preferences.values():
             for pref in prefs:
                 if pref.source == source:
                     pref.enabled = False
@@ -287,6 +356,7 @@ def set_router(router: SmartRouter) -> None:
 __all__ = [
     "DataType",
     "SourceType",
+    "SourceTier",
     "SourcePreference",
     "SmartRouter",
     "DEFAULT_PREFERENCES",
