@@ -696,7 +696,6 @@ class EastMoneyDataSource(BaseDataSource):
             # 东方财富股票列表API
             url = "https://82.push2.eastmoney.com/api/qt/clist/get"
 
-            # 确定市场参数（对标 akshare stock_zh_a_spot_em）
             if market == "sh":
                 fs_param = "m:1 t:2,m:1 t:23"  # 上海
             elif market == "sz":
@@ -705,7 +704,6 @@ class EastMoneyDataSource(BaseDataSource):
                 # 全部：沪深+北交所
                 fs_param = "m:0 t:6,m:0 t:80,m:1 t:2,m:1 t:23,m:0 t:81 s:2048"
 
-            # 分页获取（对标 akshare fetch_paginated_data）
             import math
             import time as _time
             import random as _random

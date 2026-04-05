@@ -23,7 +23,6 @@ class FinancialClient:
     QUOTE_URL = "https://push2.eastmoney.com/api/qt/stock/get"
 
     # 东方财富财务数据中心API (主要数据源)
-    # 参考akshare实现: https://datacenter.eastmoney.com/securities/api/data/get
     FINANCE_MAIN_DATA_URL = "https://datacenter.eastmoney.com/securities/api/data/get"
 
     # 财务数据接口 (暂不可用，保留接口)
