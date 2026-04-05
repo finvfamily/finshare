@@ -2,12 +2,12 @@
 智能冷却机制 - 根据错误类型分级冷却
 
 冷却策略:
-- timeout: 30秒
-- connection_error: 60秒
-- 429限流: 5分钟 (300秒)
-- 403禁止: 10分钟 (600秒)
-- 503不可用: 5分钟 (300秒)
-- default: 5分钟 (300秒)
+- timeout: 5秒
+- connection_error: 10秒
+- 429限流: 2分钟 (120秒)
+- 403禁止: 5分钟 (300秒)
+- 503不可用: 30秒
+- default: 15秒
 
 支持:
 - 连续失败累积冷却
@@ -107,7 +107,7 @@ class SmartCooldown:
 
             # 连续失败累积冷却：每次失败增加 1.5 倍冷却时间
             if state.consecutive_failures > 0:
-                multiplier = min(1 + state.consecutive_failures * 0.5, 5.0)  # 最多5倍
+                multiplier = min(1 + state.consecutive_failures * 0.5, 3.0)  # 最多3倍
                 cooldown_seconds = cooldown_seconds * multiplier
 
             # 设置冷却结束时间
